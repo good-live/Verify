@@ -1,0 +1,33 @@
+"Phrases"
+{
+	"Too_Much_Arguments"
+	{
+		"#format"	""
+		"en"		"{green}[PLG-Verify]{default} {darkred}Du kannst nur einen Spielernamen angeben :/{default}"
+		"de"		"{green}[PLG-Verify]{default} {darkred}Du kannst nur einen Spielernamen angeben :/{default}"
+	}
+	"Already_Verified"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
+		"en"		"{green}[PLG-Verify]{default} {green}{1}({2}){darkred} wurde von {green}{3}({4}){darkred} am {green}{5}{darkred} verifiziert.{default}"
+		"de"		"{green}[PLG-Verify]{default} {green}{1}({2}){darkred} wurde von {green}{3}({4}){darkred} am {green}{5}{darkred} verifiziert.{default}"
+	}
+	"Verified"
+	{
+		"#format"	"{1:s}"
+		"en"		"{green}[PLG-Verify]{default} {green}{1}{darkred} wurde erfolgreich verifiziert.{default}"
+		"de"		"{green}[PLG-Verify]{default} {green}{1}{darkred} wurde erfolgreich verifiziert.{default}"
+	}
+	"Unverified"
+	{
+		"#format"	"{1:s}"
+		"en"		"{green}[PLG-Verify]{default} {green}{1}{darkred} ist noch nicht verifiziert.{default}"
+		"de"		"{green}[PLG-Verify]{default} {green}{1}{darkred} ist noch nicht verifiziert.{default}"
+	}
+	"Nobody_Unverified"
+	{
+		"#format"	""
+		"en"		"{green}[PLG-Verify]{default} Es sind alle Spieler verifiziert.{default}"
+		"de"		"{green}[PLG-Verify]{default} Es sind alle Spieler verifiziert.{default}"
+	}
+}
