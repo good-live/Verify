@@ -23,7 +23,7 @@ enum PlayerInfos {
 }
 
 int g_ePlayerInfos[MAXPLAYERS + 1][PlayerInfos];
-
+bool g_bDatabaseConnected = false;
 
 public Plugin myinfo = 
 {
@@ -38,6 +38,7 @@ public void OnPluginStart()
 {
 	InitDebugLog("verify_debug", "Verify", ADMFLAG_GENERIC);
 	LogDebug("Verify started ...");
+	g_bDatabaseConnected = false;
 	DBConnect();
 	
 	RegAdminCmd("sm_verify", Command_Verify, ADMFLAG_GENERIC);
@@ -94,6 +95,8 @@ public Action Command_Verify(int p_iClient, int p_iArgs){
 *************************/
 
 public void OnClientPostAdminCheck(p_iClient){
+	if(!g_bDatabaseConnected)
+	    return;
 	char p_sTest[64];
 	GetClientAuthId(p_iClient, AuthId_Steam2, p_sTest, sizeof(p_sTest));
 	LogDebug("Client SteamID: %s", p_sTest);
@@ -239,6 +242,7 @@ public void DBConnect_Callback(Database db, const char[] error, any data)
 	}
 	
 	LogDebug("Database Connect was succesfull");
+	g_bDatabaseConnected = true;
 	g_hDatabase = db;
 	g_hDatabase.SetCharset("utf8mb4");
 	LogDebug("Trying to Create Tables");
