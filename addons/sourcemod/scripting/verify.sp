@@ -278,6 +278,10 @@ public void DBLoadInfos_Callback(Database db, DBResultSet results, const char[] 
 	p_pPlayerInfo.Reset();
 	
 	int p_iClient = p_pPlayerInfo.ReadCell();
+	
+	if(!IsClientValid(p_iClient))
+		return;
+	
 	LogDebug("Found Client ID: %i", p_iClient);
 	char p_sPlayerID[21];
 	p_pPlayerInfo.ReadString(p_sPlayerID, sizeof(p_sPlayerID));
