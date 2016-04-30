@@ -178,7 +178,7 @@ public int Unverified_Menu(Menu menu, MenuAction action, int param1, int param2)
 		menu.GetItem(param2, p_sName, sizeof(p_sName));
 		int p_iTarget = FindTarget(param1, p_sName, false);
 		VerifyPlayer(p_iTarget, param1);
-		menu.Display(param1, 60);
+		ShowUnverified(param1);
 	}
 }
 
