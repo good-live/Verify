@@ -10,6 +10,15 @@
 #include <multicolors>
 #include <logdebug>
 
+public Plugin myinfo = 
+{
+	name = "sm_ttt_verify",
+	author = PLUGIN_AUTHOR,
+	description = "Allows admins to verify all players",
+	version = PLUGIN_VERSION,
+	url = ""
+};
+
 //Global Database Handle
 Database g_hDatabase;
 
@@ -23,16 +32,16 @@ enum PlayerInfos {
 }
 
 int g_ePlayerInfos[MAXPLAYERS + 1][PlayerInfos];
+
 bool g_bDatabaseConnected = false;
 
-public Plugin myinfo = 
+Handle g_hOnClientVerified = null;
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	name = "sm_ttt_verify",
-	author = PLUGIN_AUTHOR,
-	description = "Allows admins to verify all players",
-	version = PLUGIN_VERSION,
-	url = ""
-};
+	g_hOnClientVerified = CreateGlobalForward("VF_OnClientVerified", ET_Ignore, Param_Cell);
+	CreateNative("VF_IsClientVerified", Native_IsClientVerified);
+}
 
 public void OnPluginStart()
 {
@@ -55,53 +64,53 @@ public void OnPluginStart()
 		Commands
 *************************/
 
-public Action Command_Verify(int p_iClient, int p_iArgs){
-	if(!IsClientValid(p_iClient)){
+public Action Command_Verify(int iClient, int iArgs){
+	if(!IsClientValid(iClient)){
 		return Plugin_Handled;
 	}
 	
-	if(p_iArgs == 0){
-		ShowUnverified(p_iClient);
+	if(iArgs == 0){
+		ShowUnverified(iClient);
 		return Plugin_Handled;
 	}
 	
-	int p_iTarget;
+	int iTarget;
 	
-	if(p_iArgs > 1){
-		CPrintToChat(p_iClient, "%t", "Too_Much_Arguments");
+	if(iArgs > 1){
+		CPrintToChat(iClient, "%t", "Too_Much_Arguments");
 	}
-	char p_sName[64];
-	GetCmdArg(1, p_sName, sizeof(p_sName));
-	p_iTarget = FindTarget(p_iClient, p_sName);
+	char sName[64];
+	GetCmdArg(1, sName, sizeof(sName));
+	iTarget = FindTarget(iClient, sName);
 	
-	if(p_iTarget == -1){
+	if(iTarget == -1){
 		return Plugin_Handled;
 	}
 	
-	if(IsVerified(p_iTarget)){
-		char p_sName2[64];
-		GetClientName(p_iTarget, p_sName2, sizeof(p_sName2));
+	if(IsVerified(iTarget)){
+		char sName2[64];
+		GetClientName(iTarget, sName2, sizeof(sName2));
 		
-		char p_sDate[64];
-		FormatTime(p_sDate, sizeof(p_sDate), "%D", g_ePlayerInfos[p_iTarget][Timestamp]);
-		CPrintToChat(p_iClient, "%t", "Already_Verified", g_ePlayerInfos[p_iTarget][PlayerName], g_ePlayerInfos[p_iTarget][PlayerID], g_ePlayerInfos[p_iTarget][AdminName], g_ePlayerInfos[p_iTarget][AdminID], p_sDate);
+		char sDate[64];
+		FormatTime(sDate, sizeof(sDate), "%D", g_ePlayerInfos[iTarget][Timestamp]);
+		CPrintToChat(iClient, "%t", "Already_Verified", g_ePlayerInfos[iTarget][PlayerName], g_ePlayerInfos[iTarget][PlayerID], g_ePlayerInfos[iTarget][AdminName], g_ePlayerInfos[iTarget][AdminID], sDate);
 		return Plugin_Handled;
 	}
-	VerifyPlayer(p_iTarget, p_iClient);
+	VerifyPlayer(iTarget, iClient);
 	return Plugin_Handled;
 }
 /************************
 		  Events
 *************************/
 
-public void OnClientPostAdminCheck(p_iClient){
+public void OnClientPostAdminCheck(iClient){
 	if(!g_bDatabaseConnected)
 	    return;
-	char p_sTest[64];
-	GetClientAuthId(p_iClient, AuthId_Steam2, p_sTest, sizeof(p_sTest));
-	LogDebug("Client SteamID: %s", p_sTest);
+	char sTest[64];
+	GetClientAuthId(iClient, AuthId_Steam2, sTest, sizeof(sTest));
+	LogDebug("Client SteamID: %s", sTest);
 	LogDebug("Loading Info of the joined player");
-	if(!LoadPlayerInfos(p_iClient)){
+	if(!LoadPlayerInfos(iClient)){
 		LogError("Loading of Playerinfos from the database failed");
 	}
 }
@@ -110,29 +119,29 @@ public void OnClientPostAdminCheck(p_iClient){
 		Functions
 *************************/
 
-public bool IsClientValid(int p_iClient){
-	if(IsClientAuthorized(p_iClient) && IsClientInGame(p_iClient) && !IsClientSourceTV(p_iClient)){
+public bool IsClientValid(int iClient){
+	if(IsClientAuthorized(iClient) && IsClientInGame(iClient) && !IsClientSourceTV(iClient)){
 		return true;
 	}
 	return false;
 }
 
-public int LoadPlayerInfos(int p_iClient){
-	if(!IsClientValid(p_iClient) || g_hDatabase == INVALID_HANDLE){
+public int LoadPlayerInfos(int iClient){
+	if(!IsClientValid(iClient) || g_hDatabase == INVALID_HANDLE){
 		return 0;
 	}
 	
-	char p_sPlayerID[21];
-	char p_sQuery[256];
-	GetClientAuthId(p_iClient, AuthId_Steam2, p_sPlayerID, sizeof(p_sPlayerID));
+	char sPlayerID[21];
+	char sQuery[256];
+	GetClientAuthId(iClient, AuthId_Steam2, sPlayerID, sizeof(sPlayerID));
 	DataPack p_pInfos;
 	p_pInfos = CreateDataPack();
-	p_pInfos.WriteCell(p_iClient);
-	p_pInfos.WriteString(p_sPlayerID);
+	p_pInfos.WriteCell(iClient);
+	p_pInfos.WriteString(sPlayerID);
 	
-	Format(p_sQuery, sizeof(p_sQuery), "SELECT `playerid`, `playername`, `adminid`, `adminname`, `time` FROM `verify` WHERE `playerid` = '%s'", p_sPlayerID);
+	Format(sQuery, sizeof(sQuery), "SELECT `playerid`, `playername`, `adminid`, `adminname`, `time` FROM `verify` WHERE `playerid` = '%s'", sPlayerID);
 	
-	g_hDatabase.Query(DBLoadInfos_Callback, p_sQuery, p_pInfos);
+	g_hDatabase.Query(DBLoadInfos_Callback, sQuery, p_pInfos);
 	return 1;
 }
 public void LoadInfosAll(){
@@ -144,25 +153,25 @@ public void LoadInfosAll(){
 		}
 	}
 }
-public void ShowUnverified(int p_iClient)
+public void ShowUnverified(int iClient)
 {
-	char p_sName[64];
-	int p_iCounter;
+	char sName[64];
+	int iCounter;
 	Menu menu = new Menu(Unverified_Menu);
 	menu.SetTitle("Unverified Player:");
 	menu.ExitButton = true;
 	for(int i = 1; i <= MaxClients; i++){
 		if(IsClientValid(i) && !IsVerified(i) && !IsFakeClient(i)){
-			GetClientName(i, p_sName, sizeof(p_sName));
-			menu.AddItem(p_sName, p_sName);
-			p_iCounter++;
+			GetClientName(i, sName, sizeof(sName));
+			menu.AddItem(sName, sName);
+			iCounter++;
 		}
 	}
-	if(!p_iCounter){
-		CPrintToChat(p_iClient, "%t", "Nobody_Unverified");
+	if(!iCounter){
+		CPrintToChat(iClient, "%t", "Nobody_Unverified");
 		delete menu;
 	}else{
-		menu.Display(p_iClient, 60);
+		menu.Display(iClient, 60);
 	}
 }
 
@@ -174,17 +183,17 @@ public int Unverified_Menu(Menu menu, MenuAction action, int param1, int param2)
 	}
 	if (action == MenuAction_Select)
 	{
-		char p_sName[64];
-		menu.GetItem(param2, p_sName, sizeof(p_sName));
-		int p_iTarget = FindTarget(param1, p_sName, false);
-		VerifyPlayer(p_iTarget, param1);
+		char sName[64];
+		menu.GetItem(param2, sName, sizeof(sName));
+		int iTarget = FindTarget(param1, sName, false);
+		VerifyPlayer(iTarget, param1);
 		ShowUnverified(param1);
 	}
 }
 
-public bool IsVerified(int p_iClient){
-	LogDebug("Timestamp: %i", g_ePlayerInfos[p_iClient][Timestamp]);
-	if(g_ePlayerInfos[p_iClient][Timestamp] != 0){
+public bool IsVerified(int iClient){
+	LogDebug("Timestamp: %i", g_ePlayerInfos[iClient][Timestamp]);
+	if(g_ePlayerInfos[iClient][Timestamp] != 0){
 		LogDebug("Returning true");
 		return true;
 	}
@@ -192,31 +201,34 @@ public bool IsVerified(int p_iClient){
 	return false;
 }
 
-public void VerifyPlayer(int p_iPlayer, int p_iAdmin){
-		char p_sPlayerName[64];
-		char p_sAdminName[64];
-		char p_sPlayerID[21];
-		char p_sAdminID[21];
-		char p_sPlayerNameE[sizeof(p_sPlayerName)*2+1];
-		char p_sAdminNameE[sizeof(p_sAdminName)*2+1];
-		GetClientAuthId(p_iPlayer, AuthId_Steam2, p_sPlayerID, sizeof(p_sPlayerID));
-		GetClientAuthId(p_iAdmin, AuthId_Steam2, p_sAdminID, sizeof(p_sAdminID));
-		GetClientName(p_iPlayer, p_sPlayerName, sizeof(p_sPlayerName));
-		GetClientName(p_iAdmin, p_sAdminName, sizeof(p_sAdminName));
-		g_hDatabase.Escape(p_sPlayerName, p_sPlayerNameE, sizeof(p_sPlayerNameE));
-		g_hDatabase.Escape(p_sAdminName, p_sAdminNameE, sizeof(p_sAdminNameE));
+public void VerifyPlayer(int iPlayer, int iAdmin){
+		char sPlayerName[64];
+		char sAdminName[64];
+		char sPlayerID[21];
+		char sAdminID[21];
+		char sPlayerNameE[sizeof(sPlayerName)*2+1];
+		char sAdminNameE[sizeof(sAdminName)*2+1];
+		GetClientAuthId(iPlayer, AuthId_Steam2, sPlayerID, sizeof(sPlayerID));
+		GetClientAuthId(iAdmin, AuthId_Steam2, sAdminID, sizeof(sAdminID));
+		GetClientName(iPlayer, sPlayerName, sizeof(sPlayerName));
+		GetClientName(iAdmin, sAdminName, sizeof(sAdminName));
+		g_hDatabase.Escape(sPlayerName, sPlayerNameE, sizeof(sPlayerNameE));
+		g_hDatabase.Escape(sAdminName, sAdminNameE, sizeof(sAdminNameE));
 		
 		
-		char p_sQuery[256];
-		Format(p_sQuery, sizeof(p_sQuery), "INSERT INTO `verify` (`playerid`, `playername`, `adminid`, `adminname`, `time`) VALUES (\"%s\", \"%s\", \"%s\", \"%s\", %i) ON DUPLICATE KEY UPDATE id=id", p_sPlayerID, p_sPlayerNameE, p_sAdminID, p_sAdminNameE, GetTime());
-		g_hDatabase.Query(DBQuery_Callback, p_sQuery);
+		char sQuery[256];
+		Format(sQuery, sizeof(sQuery), "INSERT INTO `verify` (`playerid`, `playername`, `adminid`, `adminname`, `time`) VALUES (\"%s\", \"%s\", \"%s\", \"%s\", %i) ON DUPLICATE KEY UPDATE id=id", sPlayerID, sPlayerNameE, sAdminID, sAdminNameE, GetTime());
+		g_hDatabase.Query(DBQuery_Callback, sQuery);
 		
-		strcopy(g_ePlayerInfos[p_iPlayer][PlayerName], 64, p_sPlayerName);
-		strcopy(g_ePlayerInfos[p_iPlayer][PlayerID], 21, p_sPlayerID);
-		strcopy(g_ePlayerInfos[p_iPlayer][AdminName], 64, p_sAdminName);
-		strcopy(g_ePlayerInfos[p_iPlayer][AdminID], 21, p_sAdminID);
-		g_ePlayerInfos[p_iPlayer][Timestamp] = GetTime();
-		CPrintToChat(p_iAdmin, "%t", "Verified", p_sPlayerName);
+		strcopy(g_ePlayerInfos[iPlayer][PlayerName], 64, sPlayerName);
+		strcopy(g_ePlayerInfos[iPlayer][PlayerID], 21, sPlayerID);
+		strcopy(g_ePlayerInfos[iPlayer][AdminName], 64, sAdminName);
+		strcopy(g_ePlayerInfos[iPlayer][AdminID], 21, sAdminID);
+		g_ePlayerInfos[iPlayer][Timestamp] = GetTime();
+		CPrintToChat(iAdmin, "%t", "Verified", sPlayerName);
+		Call_StartForward(g_hOnClientVerified);
+		Call_PushCell(iPlayer);
+		Call_Finish();
 }
 
 /************************
@@ -246,9 +258,9 @@ public void DBConnect_Callback(Database db, const char[] error, any data)
 	g_hDatabase = db;
 	g_hDatabase.SetCharset("utf8mb4");
 	LogDebug("Trying to Create Tables");
-	char p_sQuery[512];
-	Format(p_sQuery, sizeof(p_sQuery), "CREATE TABLE IF NOT EXISTS `verify` ( `id` INT NOT NULL AUTO_INCREMENT, `playerid` VARCHAR(21) NOT NULL, `playername` VARCHAR(64) CHARACTER SET utf8mb4 NOT NULL, `adminid` VARCHAR(21) NOT NULL, `adminname` VARCHAR(64) CHARACTER SET utf8mb4 NOT NULL,`time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE (`playerid`))");
-	g_hDatabase.Query(DBCreateTable_Callback, p_sQuery);
+	char sQuery[512];
+	Format(sQuery, sizeof(sQuery), "CREATE TABLE IF NOT EXISTS `verify` ( `id` INT NOT NULL AUTO_INCREMENT, `playerid` VARCHAR(21) NOT NULL, `playername` VARCHAR(64) CHARACTER SET utf8mb4 NOT NULL, `adminid` VARCHAR(21) NOT NULL, `adminname` VARCHAR(64) CHARACTER SET utf8mb4 NOT NULL,`time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE (`playerid`))");
+	g_hDatabase.Query(DBCreateTable_Callback, sQuery);
 }
 
 public void DBCreateTable_Callback(Database db, DBResultSet results, const char[] error, any data){
@@ -277,45 +289,54 @@ public void DBLoadInfos_Callback(Database db, DBResultSet results, const char[] 
 	
 	p_pPlayerInfo.Reset();
 	
-	int p_iClient = p_pPlayerInfo.ReadCell();
+	int iClient = p_pPlayerInfo.ReadCell();
 	
-	if(!IsClientValid(p_iClient))
+	if(!IsClientValid(iClient))
 		return;
 	
-	LogDebug("Found Client ID: %i", p_iClient);
-	char p_sPlayerID[21];
-	p_pPlayerInfo.ReadString(p_sPlayerID, sizeof(p_sPlayerID));
+	LogDebug("Found Client ID: %i", iClient);
+	char sPlayerID[21];
+	p_pPlayerInfo.ReadString(sPlayerID, sizeof(sPlayerID));
 	
-	char p_sPlayerName[64];
-	GetClientName(p_iClient, p_sPlayerName, sizeof(p_sPlayerName));
+	char sPlayerName[64];
+	GetClientName(iClient, sPlayerName, sizeof(sPlayerName));
 	
-	int p_iRows = results.RowCount;
-	LogDebug("Found %i Rows for client: %i", p_iRows, p_iClient);
-	if(!p_iRows){
-		LogDebug("Saving Playername: %s SteamID: %s AdminName:  AdminID:  Timestamp: 0", p_sPlayerName, p_sPlayerID);
-		strcopy(g_ePlayerInfos[p_iClient][PlayerName], 64, p_sPlayerName );
-		strcopy(g_ePlayerInfos[p_iClient][PlayerID], 21, p_sPlayerID );
-		strcopy(g_ePlayerInfos[p_iClient][AdminName], 64, "" );
-		strcopy(g_ePlayerInfos[p_iClient][AdminID], 21, "" );
-		g_ePlayerInfos[p_iClient][Timestamp] = 0;
-	}else if(p_iRows == 1){
+	int iRows = results.RowCount;
+	LogDebug("Found %i Rows for client: %i", iRows, iClient);
+	if(!iRows){
+		LogDebug("Saving Playername: %s SteamID: %s AdminName:  AdminID:  Timestamp: 0", sPlayerName, sPlayerID);
+		strcopy(g_ePlayerInfos[iClient][PlayerName], 64, sPlayerName );
+		strcopy(g_ePlayerInfos[iClient][PlayerID], 21, sPlayerID );
+		strcopy(g_ePlayerInfos[iClient][AdminName], 64, "" );
+		strcopy(g_ePlayerInfos[iClient][AdminID], 21, "" );
+		g_ePlayerInfos[iClient][Timestamp] = 0;
+	}else if(iRows == 1){
 		results.FetchRow();
-		char p_sAdminName[64];
-		char p_sAdminID[21];
-		int p_iTimestamp = results.FetchInt(4);
-		LogDebug("Writing Timestamp: %i", p_iTimestamp);
-		results.FetchString(3, p_sAdminName, sizeof(p_sAdminName));
-		results.FetchString(2, p_sAdminID, sizeof(p_sAdminID));
-		LogDebug("Writing AdminName: %s", p_sAdminName);
-		LogDebug("Writing AdminID: %s", p_sAdminID);
-		LogDebug("Saving Playername: %s, SteamID: %s, AdminName: %s, AdminID: %s, Timestamp: %i", p_sPlayerName, p_sPlayerID, p_sAdminID, p_sAdminName, p_iTimestamp);
-		strcopy(g_ePlayerInfos[p_iClient][PlayerName], 64, p_sPlayerName);
-		strcopy(g_ePlayerInfos[p_iClient][PlayerID], 21, p_sPlayerID);
-		strcopy(g_ePlayerInfos[p_iClient][AdminName], 64, p_sAdminName);
-		strcopy(g_ePlayerInfos[p_iClient][AdminID], 21, p_sAdminID);
-		g_ePlayerInfos[p_iClient][Timestamp] = p_iTimestamp;
+		char sAdminName[64];
+		char sAdminID[21];
+		int iTimestamp = results.FetchInt(4);
+		LogDebug("Writing Timestamp: %i", iTimestamp);
+		results.FetchString(3, sAdminName, sizeof(sAdminName));
+		results.FetchString(2, sAdminID, sizeof(sAdminID));
+		LogDebug("Writing AdminName: %s", sAdminName);
+		LogDebug("Writing AdminID: %s", sAdminID);
+		LogDebug("Saving Playername: %s, SteamID: %s, AdminName: %s, AdminID: %s, Timestamp: %i", sPlayerName, sPlayerID, sAdminID, sAdminName, iTimestamp);
+		strcopy(g_ePlayerInfos[iClient][PlayerName], 64, sPlayerName);
+		strcopy(g_ePlayerInfos[iClient][PlayerID], 21, sPlayerID);
+		strcopy(g_ePlayerInfos[iClient][AdminName], 64, sAdminName);
+		strcopy(g_ePlayerInfos[iClient][AdminID], 21, sAdminID);
+		g_ePlayerInfos[iClient][Timestamp] = iTimestamp;
 	}else{
 		LogDebug("Multiple Player ID's Found. Whoops. Unloading ...");
 		SetFailState("Found multiple PlayerID's. Something went horrible wrong :O");
 	}
+}
+
+public int Native_IsClientVerified(Handle plugin, int numParams){
+	int client = GetNativeCell(1);
+	
+	if (IsClientValid(client))
+		return IsVerified(client);
+		
+	return 0;
 }
