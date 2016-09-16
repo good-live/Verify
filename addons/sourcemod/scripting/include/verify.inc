@@ -4,15 +4,15 @@
 #define _VF_included
 
 /*
- * Determines if a player is dead and has had their body found.
+ * Determines if a player is verified or not.
  *
  * @param client              The client index to lookup.
  */
-native bool TTT_GetFoundStatus(int client);
+native bool VF_IsClientVerified(int client);
 
 /*
- * Called when a client's role is assigned.
+ * Called when a client gets verified.
  *
  * @param client            Client index.
  */
-forward void TTT_OnClientGetRole(int client);
+forward void VF_OnClientVerified(int client);
