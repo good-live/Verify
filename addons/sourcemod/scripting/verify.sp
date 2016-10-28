@@ -156,14 +156,16 @@ public void LoadInfosAll(){
 public void ShowUnverified(int iClient)
 {
 	char sName[64];
+	char sUID[10];
 	int iCounter;
 	Menu menu = new Menu(Unverified_Menu);
-	menu.SetTitle("Unverified Player:");
+	menu.SetTitle("Unverified Players:");
 	menu.ExitButton = true;
 	for(int i = 1; i <= MaxClients; i++){
 		if(IsClientValid(i) && !IsVerified(i) && !IsFakeClient(i)){
 			GetClientName(i, sName, sizeof(sName));
-			menu.AddItem(sName, sName);
+			IntToString(GetClientUserId(i), sUID, sizeof(sUID));
+			menu.AddItem(sUID, sName);
 			iCounter++;
 		}
 	}
@@ -183,9 +185,13 @@ public int Unverified_Menu(Menu menu, MenuAction action, int param1, int param2)
 	}
 	if (action == MenuAction_Select)
 	{
-		char sName[64];
-		menu.GetItem(param2, sName, sizeof(sName));
-		int iTarget = FindTarget(param1, sName, false);
+		char sUID[10];
+		menu.GetItem(param2, sUID, sizeof(sUID));
+		int iTarget = GetClientOfUserId(StringToInt(sUID));
+	
+		if(!IsClientValid(iTarget))
+			return;
+
 		VerifyPlayer(iTarget, param1);
 		ShowUnverified(param1);
 	}
